@@ -1,0 +1,36 @@
+# elias/ruby_2_3
+# VERSION 0.0.1
+
+
+
+FROM ruby:2.3
+MAINTAINER Elias Haisch <elias@eliashaiisch.de>
+
+RUN uname -a
+RUN apt-get update -qq && apt-get install -y build-essential libpq-dev wget git sqlite3 libsqlite3-dev libgmp3-dev sphinxsearch memcached imagemagick transifex-client graphviz
+RUN adduser --disabled-password --gecos '' --home /hitobito_root www-hitobito
+RUN mkdir /hitobito_root/www/
+COPY  --chown=www-hitobito:www-hitobito hitobito /hitobito_root/www/hitobito
+COPY  --chown=www-hitobito:www-hitobito hitobito_generic /hitobito_root/www/hitobito_generic
+RUN chown www-hitobito:www-hitobito -R /hitobito_root
+WORKDIR /hitobito_root/www
+RUN ls -lah && ls -lah hitobito/
+
+USER www-hitobito
+RUN echo "export GEM_HOME=$(ruby -e 'puts Gem.user_dir')" >> ~/.bashrc
+RUN export GEM_HOME=$(ruby -e 'puts Gem.user_dir')
+RUN cp hitobito/Wagonfile.ci hitobito/Wagonfile && cp hitobito/Gemfile.lock hitobito_generic/
+RUN cd hitobito/ && bundle install
+RUN cd hitobito/ && rake db:create
+RUN cd hitobito/ && rake db:setup:all
+RUN cd hitobito/ && rake
+RUN cd hitobito/ && export RAILS_HOST_NAME=testinghitobitodocker.local && export RAILS_ROOT_USER_EMAIL=root@localhost
+RUN cd hitobito/ RAILS_SECRET_TOKEN=$(rake secret | awk 'NR==2') && export RAILS_SECRET_TOKEN
+#RUN cd hitobito/ && foreman start 
+
+USER root
+
+CMD passwd && login; exit 0
+
+EXPOSE 88
+EXPOSE 1025
